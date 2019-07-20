@@ -1,56 +1,38 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"net"
 	"net/http"
+	"os"
 
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
-	pb "github.com/jun06t/prometheus-sample/grpc-gateway/proto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"google.golang.org/grpc"
+
+	pb "github.com/jun06t/prometheus-sample/grpc-gateway/proto"
 )
 
-const (
-	port = ":9090"
+var (
+	endpoint = ":9090"
+	promAddr = ":9100"
 )
 
-type aliveService struct{}
-
-func (s *aliveService) GetStatus(ctx context.Context, in *pb.Empty) (*pb.AliveResponse, error) {
-	return &pb.AliveResponse{Status: true}, nil
-}
-
-type userService struct{}
-
-func (s *userService) GetUser(ctx context.Context, in *pb.GetUserRequest) (*pb.UserResponse, error) {
-	return &pb.UserResponse{
-		Id:   in.Id,
-		Name: "Alice",
-		Age:  20,
-	}, nil
-}
-
-func (s *userService) GetUsersByGroup(ctx context.Context, in *pb.UserGroupRequest) (*pb.UsersResponse, error) {
-	return &pb.UsersResponse{
-		Group: in.Group,
-		Users: []*pb.UserResponse{
-			{Name: "Alice", Age: 20},
-			{Name: "Bob", Age: 24},
-		},
-	}, nil
-}
-
-func (s *userService) UpdateUser(ctx context.Context, in *pb.UpdateUserRequest) (*pb.Empty, error) {
-	log.Printf("update body is {id: %s, name: %s, age: %d}\n", in.Id, in.Name, in.Age)
-	return &pb.Empty{}, nil
+func init() {
+	ep := os.Getenv("ENDPOINT")
+	if ep != "" {
+		endpoint = ep
+	}
+	pa := os.Getenv("SERVER_PROMETHEUS_METRICS_ADDR")
+	if pa != "" {
+		promAddr = pa
+	}
 }
 
 func main() {
-	fmt.Println("Listen gRPC Address:", port)
-	lis, err := net.Listen("tcp", port)
+	fmt.Println("Listen gRPC Address:", endpoint)
+	lis, err := net.Listen("tcp", endpoint)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -63,20 +45,25 @@ func main() {
 	pb.RegisterAliveServiceServer(s, new(aliveService))
 	pb.RegisterUserServiceServer(s, new(userService))
 
-	// Enable histogram
-	grpc_prometheus.EnableHandlingTimeHistogram()
-
 	// After all your registrations, make sure all of the Prometheus metrics are initialized.
 	grpc_prometheus.Register(s)
 
-	// Register Prometheus metrics handler.
-	http.Handle("/metrics", promhttp.Handler())
-	go func() {
-		log.Fatal(http.ListenAndServe(":8080", nil))
-	}()
+	runPrometheus()
 
 	err = s.Serve(lis)
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+// runPrometheus runs prometheus metrics server. This is non-blocking function.
+func runPrometheus() {
+	mux := http.NewServeMux()
+	// Enable histogram
+	grpc_prometheus.EnableHandlingTimeHistogram()
+	mux.Handle("/metrics", promhttp.Handler())
+	go func() {
+		fmt.Println("Prometheus metrics bind address", promAddr)
+		log.Fatal(http.ListenAndServe(promAddr, mux))
+	}()
 }

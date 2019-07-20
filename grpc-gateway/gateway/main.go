@@ -10,21 +10,26 @@ import (
 
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
-	pb "github.com/jun06t/prometheus-sample/grpc-gateway/proto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"google.golang.org/grpc"
+
+	pb "github.com/jun06t/prometheus-sample/grpc-gateway/proto"
 )
 
 var (
 	endpoint   = "localhost:9090"
 	listenAddr = ":3000"
-	promAddr   = ":8081"
+	promAddr   = ":9100"
 )
 
 func init() {
 	ep := os.Getenv("ENDPOINT")
 	if ep != "" {
 		endpoint = ep
+	}
+	pa := os.Getenv("CLIENT_PROMETHEUS_METRICS_ADDR")
+	if pa != "" {
+		promAddr = pa
 	}
 }
 
@@ -35,7 +40,7 @@ func newGateway(ctx context.Context, opts ...runtime.ServeMuxOption) (http.Handl
 		grpc.WithUnaryInterceptor(grpc_prometheus.UnaryClientInterceptor),
 	}
 
-	fmt.Println("Endpoint: ", endpoint)
+	fmt.Println("Backend endpoint: ", endpoint)
 	conn, err := grpc.Dial(endpoint, dialOpts...)
 	if err != nil {
 		return nil, err
@@ -52,8 +57,8 @@ func newGateway(ctx context.Context, opts ...runtime.ServeMuxOption) (http.Handl
 	return mux, nil
 }
 
-// Run starts a HTTP server and blocks forever if successful.
-func Run(address string, opts ...runtime.ServeMuxOption) error {
+// run starts a HTTP server and blocks forever if successful.
+func run(address string, opts ...runtime.ServeMuxOption) error {
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -67,15 +72,22 @@ func Run(address string, opts ...runtime.ServeMuxOption) error {
 }
 
 func main() {
+	runPrometheus()
+
+	fmt.Println("Gateway bind address:", listenAddr)
+	if err := run(listenAddr); err != nil {
+		panic(err)
+	}
+}
+
+// runPrometheus runs prometheus metrics server. This is non-blocking function.
+func runPrometheus() {
 	mux := http.NewServeMux()
+	// Enable histogram
 	grpc_prometheus.EnableClientHandlingTimeHistogram()
 	mux.Handle("/metrics", promhttp.Handler())
 	go func() {
+		fmt.Println("Prometheus metrics bind address:", promAddr)
 		log.Fatal(http.ListenAndServe(promAddr, mux))
 	}()
-
-	fmt.Println("Listen Address:", listenAddr)
-	if err := Run(listenAddr); err != nil {
-		panic(err)
-	}
 }
