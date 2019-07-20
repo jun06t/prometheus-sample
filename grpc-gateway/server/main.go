@@ -24,7 +24,7 @@ func init() {
 	if ep != "" {
 		endpoint = ep
 	}
-	pa := os.Getenv("SERVER_PROMETHEUS_METRICS_ADDR")
+	pa := os.Getenv("PROMETHEUS_METRICS_ADDR")
 	if pa != "" {
 		promAddr = pa
 	}
