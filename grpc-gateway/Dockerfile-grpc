@@ -1,16 +1,15 @@
 FROM golang:1.12-alpine
 
-ARG REPO="github.com/jun06t/prometheus-sample/grpc-gateway"
-
 RUN apk add --no-cache git ca-certificates \
-  && mkdir -p /go/src/${REPO}
-COPY . /go/src/${REPO}
+  && mkdir -p src
+COPY . ${HOME}/src
 
-WORKDIR /go/src/${REPO}
+WORKDIR ${HOME}/src
 
 RUN GO111MODULE=on go build -o grpc-backend ./server/* && \
   mv grpc-backend /usr/local/bin/
 
 EXPOSE 8080
+EXPOSE 9100
 
 CMD ["grpc-backend"]

@@ -15,7 +15,7 @@ import (
 )
 
 var (
-	endpoint = ":9090"
+	endpoint = ":8080"
 	promAddr = ":9100"
 )
 
