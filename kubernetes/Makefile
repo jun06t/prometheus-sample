@@ -26,5 +26,6 @@ destroy:
 	kubectl delete service backend-svc
 	kubectl delete service grafana-svc
 	kubectl delete service prometheus-svc
+	kubectl delete service prometheus-proxy
 	kubectl delete configmap prometheus-config
 

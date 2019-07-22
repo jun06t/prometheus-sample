@@ -13,6 +13,21 @@ data:
       - job_name: 'prometheus'
         static_configs:
         - targets: ['localhost:9090']
-      - job_name: 'backend'
-        static_configs:
-        - targets: ['backend-svc:10001']
+      - job_name: 'k8apiserver'
+        kubernetes_sd_configs: 
+        - role: endpoints
+        relabel_configs:
+        - source_labels:
+          - __meta_kubernetes_namespace
+          - __meta_kubernetes_service_name
+          regex: default;kubernetes
+          action: drop
+        - source_labels:
+          - __meta_kubernetes_namespace
+          - __meta_kubernetes_pod_container_port_number
+          regex: default;9100
+          action: keep
+        - source_labels:
+          - __meta_kubernetes_service_name
+          - __meta_kubernetes_pod_name
+          target_label: job
