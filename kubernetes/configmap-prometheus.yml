@@ -46,5 +46,7 @@ data:
           action: keep
         - source_labels:
           - __meta_kubernetes_service_name
-          - __meta_kubernetes_pod_name
           target_label: job
+        - source_labels:
+          - __meta_kubernetes_pod_name
+          target_label: pod
