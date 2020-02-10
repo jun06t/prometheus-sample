@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-deployment
+spec:
+  selector:
+    matchLabels:
+      app: backend-service
+  replicas: 3
+  template:
+    metadata:
+      labels:
+        app: backend-service
+    spec:
+      containers:
+      - name: backend
+        image: "jun06t/grpc-backend-prometheus"
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8080
+        - containerPort: 9100
+        env:
+        - name: ENDPOINT
+          value: ":8080"
+        - name: PROMETHEUS_METRICS_ADDR
+          value: ":9100"
