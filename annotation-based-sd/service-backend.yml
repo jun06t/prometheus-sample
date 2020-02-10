@@ -4,7 +4,7 @@ metadata:
   name: backend-svc
   annotations:
     prometheus.io/scrape: 'true'
-    prometheus.io/port: '10001'
+    prometheus.io/port: '9101'
 spec:
   type: ClusterIP
   ports:
@@ -15,6 +15,6 @@ spec:
   - name: metrics
     protocol: TCP
     port: 10001
-    targetPort: 9100
+    targetPort: 9101
   selector:
     app: backend-service
